@@ -84,6 +84,10 @@ console.log("getThresholdResult");
 							if (responseSuite.runs[i1].results[i2].result < upperLimitAverage) {
 								passed[elementId]++;
 							}
+							testScores.push({
+								"passed": passed[elementId] * weight,
+								"total": total[elementId] * weight
+							});
 						}
 
 						if (testScoresPerRun && testScoresPerRun[responseSuite.runs[i1].id]) {
@@ -110,17 +114,13 @@ console.log("getThresholdResult");
 				responseSuite.elements[elementId].weightedPercentage = Math.round(passedPercent * 100) / 100;
 			}
 
-			for (var t = 0, l = testScoresPerRun.length; t < l; t++) {
+			for (var testScore in testScoresPerRun) {
 				for (var i1 = 0, l1 = responseSuite.runs.length; i1 < l1; i1++) {
-					if (testScoresPerRun[t].runId === responseSuite.runs[i1].id) {
-						var passed = 0;
-						var total = 0;
+					if (testScore === responseSuite.runs[i1].id) {
+						var passed = testScoresPerRun[testScore].passed;
+						var total = testScoresPerRun[testScore].total;
 						var passedPercent = 0;
 
-						for (var j=0; j<testScores.length; j++) {
-							passed += testScores[j].passed;
-							total += testScores[j].total;
-						}
 						passedPercent = (passed / total) * 100;
 						responseSuite.runs[i1].weightedPercentage = Math.round(passedPercent * 100) / 100;
 					}
