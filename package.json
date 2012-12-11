@@ -1,0 +1,27 @@
+{
+  "name": "OAEModelLoader",
+  "author": "Sakai Foundation",
+  "version": "0.1.0",
+  "dependencies": {
+    "express": "latest",
+    "mime": "latest",
+    "mkdirp": "latest",
+    "moment": "latest",
+    "ncp": "latest",
+    "underscore": "latest",
+    "fast-stats": "latest"
+  },
+  "devDependencies": {
+    "optimist": "~0.3.5",
+    "fast-stats": "0.0.1",
+    "ncp": "~0.2.6",
+    "mkdirp": "~0.3.4",
+    "mime": "~1.2.7",
+    "underscore": "~1.4.2",
+    "moment": "~1.7.2",
+    "express": "~3.0.3"
+  },
+  "engines": {
+    "node": ">=0.8"
+  }
+}

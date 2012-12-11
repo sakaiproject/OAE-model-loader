@@ -1,35 +1,61 @@
+/*
+ * Copyright 2012 Sakai Foundation (SF) Licensed under the
+ * Educational Community License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ * 
+ *     http://www.osedu.org/licenses/ECL-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
+
 var argv = require('optimist')
-    .usage('Usage: $0 -b <number of batches to generate> [-u <number of users>] [-w <number of worlds>]')
+    .usage('Usage: $0 -b <number of batches to generate> [-u <number of users>] [-g <number of groupss>]')
     
     .demand('b')
     .alias('b', 'batches')
     .describe('b', 'Number of batches to generate')
     
+    .demand('t')
+    .alias('t', 'tenant')
+    .describe('t', 'Tenant alias')
+    
     .alias('u', 'users')
     .describe('u', 'Number of users per batch')
-    .default('u', 500)
+    .default('u', 1000)
     
-    .alias('w', 'worlds')
-    .describe('w', 'Number of worlds per batch')
-    .default('w', 250)
+    .alias('g', 'groups')
+    .describe('g', 'Number of groups per batch')
+    .default('g', 2000)
+
+    .alias('c', 'content')
+    .describe('c', 'Number of content items per batch')
+    .default('c', 5000)
     .argv;
 
-var general = require("./api/general.js");
-var user = require("./api/user.model.js");
-var contacts = require("./api/contacts.model.js");
-var world = require("./api/world.model.js");
+
+var fs = require('fs');
+
+var general = require('./api/general.js');
+var user = require('./api/user.generate.js');
+var group = require('./api/group.generate.js');
+var content = require('./api/content.generate.js');
 
 //////////////////////////////////////
 // OVERALL CONFIGURATION PARAMETERS //
 //////////////////////////////////////
 
-var SCRIPT_FOLDER = "scripts";
+var SCRIPT_FOLDER = 'scripts';
 
 var TOTAL_BATCHES = argv.batches;
+var TENANT_ALIAS = argv.tenant;
 var USERS_PER_BATCH = argv.users;
-var WORLDS_PER_BATCH = argv.worlds;
-var CONTENT_PER_BATCH = 0;
-var COLLECTIONS_PER_BATCH = 0;
+var GROUPS_PER_BATCH = argv.groups;
+var CONTENT_PER_BATCH = argv.content;
 
 ////////////////////
 // KICK OFF BATCH //
@@ -37,49 +63,61 @@ var COLLECTIONS_PER_BATCH = 0;
 
 var batches = [];
 
-var run = function(){
-    for (var i = 0; i < TOTAL_BATCHES; i++){
+var run = function() {
+    for (var i = 0; i < TOTAL_BATCHES; i++) {
         var batch = generateBatch(i);
+
         // Write users to file
-        general.writeFileIntoArray("./" + SCRIPT_FOLDER + "/users/" + i + ".txt", batch.users);
-        // Write contacts to file
-        general.writeFileIntoArray("./" + SCRIPT_FOLDER + "/contacts/" + i + ".txt", batch.contacts);
-        // Write worlds to file
-        general.writeFileIntoArray("./" + SCRIPT_FOLDER + "/worlds/" + i + ".txt", batch.worlds);
+        general.writeObjectToFile('./' + SCRIPT_FOLDER + '/users/' + i + '.txt', batch.users);
+        // Write groups to file
+        general.writeObjectToFile('./' + SCRIPT_FOLDER + '/groups/' + i + '.txt', batch.groups);
         // Write content to file
-        // TODO
-        // Write collections to file
-        // TODO
-        // Write sharing to file
-        // TODO
-        // Write areas to file
-        // TODO
-        // Write messages to file
-        // TODO
+        general.writeObjectToFile('./' + SCRIPT_FOLDER + '/content/' + i + '.txt', batch.content);
+
         batches.push(batch);
     }
 };
 
-var generateBatch = function(id){
-    console.log("Generating Batch " + id);
-    var batch = {};
-    batch.users = [];
-    for (var u = 0; u < USERS_PER_BATCH; u++){
-        try {
-            batch.users.push(new user.User(id));
-        } catch (err){u--;}
+var generateBatch = function(id) {
+    console.time('Finished Generating Batch ' + id);
+    console.log('Generating Batch ' + id);
+    var batch = {
+        users: {},
+        groups: {},
+        content: {}
+    };
+    // Generate users
+    for (var u = 0; u < USERS_PER_BATCH; u++) {
+        var newUser = new user.User(id, TENANT_ALIAS);
+        batch.users[newUser.id] = newUser;
     }
-    batch.contacts = contacts.generateContacts(batch.users);
-    batch.worlds = [];
-    for (var w = 0; w < WORLDS_PER_BATCH; w++){
-        try {
-            batch.worlds.push(new world.World(id, batch.users));
-        } catch (err2){w--;}
+    // Generate groups
+    for (var g = 0; g < GROUPS_PER_BATCH; g++) {
+        var newGroup = new group.Group(id, batch.users, TENANT_ALIAS);
+        batch.groups[newGroup.id] = newGroup;
     }
-    batch.worlds = world.setWorldMemberships(id, batch.worlds, batch.users);
-    console.log("Finished Generating Batch " + id);
-    console.log("=================================");
+    batch.groups = group.setGroupMemberships(id, batch.groups, batch.users);
+    // Generate content
+    for (var c = 0; c < CONTENT_PER_BATCH; c++) {
+        var newContent = new content.Content(id, batch.users, batch.groups);
+        batch.content[newContent.id] = newContent;
+    }
+    console.timeEnd('Finished Generating Batch ' + id);
+    console.log('=================================');
     return batch;
 };
 
-run();
+var checkDirectories = function() {
+    general.createFolder('scripts');
+    general.createFolder('scripts/users');
+    general.createFolder('scripts/groups');
+    general.createFolder('scripts/content');
+    general.createFolder('results');
+};
+
+var init = function() {
+    checkDirectories();
+    run();
+};
+
+init();

@@ -1,6 +1,21 @@
-var general = require("./general.js");
+/*
+ * Copyright 2012 Sakai Foundation (SF) Licensed under the
+ * Educational Community License, Version 2.0 (the "License"); you may
+ * not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ * 
+ *     http://www.osedu.org/licenses/ECL-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an "AS IS"
+ * BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ */
 
-exports.Suite = function(id, title, threshold, target, elements, runs){
+var general = require('./general.js');
+
+exports.Suite = function(id, title, threshold, target, elements, runs) {
     var that = {};
 
     that.id = id;
@@ -10,26 +25,26 @@ exports.Suite = function(id, title, threshold, target, elements, runs){
     that.elements = elements;
     that.runs = runs;
 
-    that.run = function(callback){
+    that.run = function(callback) {
         var results = [];
         var currentRun = -1;
-        var runTest = function(){
+        var runTest = function() {
             currentRun++;
-            console.log(" Running request " + (currentRun + 1) + " of " + that.runs.length);
-            if (currentRun < that.runs.length){
+            console.log(' Running request ' + (currentRun + 1) + ' of ' + that.runs.length);
+            if (currentRun < that.runs.length) {
                 var run = that.runs[currentRun];
-                var auth = run.user.userid + ":" + run.user.password;
                 var startTime = new Date().getTime();
                 general.urlReq(run.url, {
-                    method: run.method || "GET",
+                    method: run.method || 'GET',
                     params: run.params || {},
-                    auth: auth
-                }, function(res, success){
+                    auth: run.user,
+                    telemetry: run.type
+                }, function(res, success) {
                     var endTime = new Date().getTime();
                     results.push({
-                        "type": run.type,
-                        "user": run.user.userid,
-                        "result": endTime - startTime
+                        'type': run.type,
+                        'user': run.user.userid,
+                        'result': endTime - startTime
                     });
                     runTest();
                 });
@@ -43,7 +58,7 @@ exports.Suite = function(id, title, threshold, target, elements, runs){
     return that;
 };
 
-exports.SuiteElement = function(id, title, targetAverage, upperLimitAverage, tolerance, weight){
+exports.SuiteElement = function(id, title, targetAverage, upperLimitAverage, tolerance, weight) {
     var that = {};
 
     that.id = id;
