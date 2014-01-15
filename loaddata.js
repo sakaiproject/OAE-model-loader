@@ -50,6 +50,7 @@ var userAPI = require('./api/user.dataload.js');
 var groupAPI = require('./api/group.dataload.js');
 var contentAPI = require('./api/content.dataload.js');
 var discussionsAPI = require('./api/discussion.dataload.js');
+var publicationAPI = require('./api/publication.dataload.js');
 var runSuites = require('./run_suites.js');
 
 //////////////////////////////////////
@@ -86,7 +87,8 @@ var idMappings = {
     'users': {},
     'groups': {},
     'content': {},
-    'discussions': {}
+    'discussions': {},
+    'publications': {}
 };
 
 console.time("Finished running data loader");
@@ -98,6 +100,7 @@ var loadNextBatch = function() {
     idMappings['groups'][currentBatch] = {};
     idMappings['content'][currentBatch] = {};
     idMappings['discussions'][currentBatch] = {};
+    idMappings['publications'][currentBatch] = {};
 
     if (currentBatch < BATCHES) {
         console.log('Loading Batch ' + currentBatch);
@@ -106,14 +109,16 @@ var loadNextBatch = function() {
         var groups = general.loadJSONFileIntoObject('./scripts/groups/' + currentBatch + '.txt');
         var content = general.loadJSONFileIntoObject('./scripts/content/' + currentBatch + '.txt');
         var discussions = general.loadJSONFileIntoObject('./scripts/discussions/' + currentBatch + '.txt');
+        var publications = general.loadJSONFileIntoObject('./scripts/publications/' + currentBatch + '.txt');
 
         batches.push({
             'users': users,
             'groups': groups,
             'content': content,
-            'discussions': discussions
+            'discussions': discussions,
+            'publications': publications
         });
-        loadUsers(users, groups, content, discussions, currentBatch);
+        loadUsers(users, groups, content, discussions, publications, currentBatch);
     } else {
         finishedAllBatches();
     }
@@ -153,7 +158,7 @@ var checkRunSuites = function(currentBatch) {
 // USERS //
 ///////////
 
-var loadUsers = function(users, groups, content, discussions, currentBatch) {
+var loadUsers = function(users, groups, content, discussions, publications, currentBatch) {
     var currentUser = -1;
     var usersToLoad = _.values(users);
     var loadNextUser = function() {
@@ -178,25 +183,60 @@ var loadUsers = function(users, groups, content, discussions, currentBatch) {
         } else {
             general.writeObjectToFile('./scripts/generatedIds/users-' + currentBatch + '.txt', idMappings['users'][currentBatch]);
             console.log('  ' + new Date().toUTCString() + ': Finished Loading ' + usersToLoad.length + ' Users');
-            return loadFollowing(users, groups, content, discussions, currentBatch);
+            return loadFollowing(users, groups, content, discussions, publications, currentBatch);
         }
     };
     loadNextUser();
 };
 
-var loadFollowing = function(users, groups, content, discussions, currentBatch) {
+var loadFollowing = function(users, groups, content, discussions, publications, currentBatch) {
     var currentUser = -1;
     var usersFollowingToLoad = _.values(users);
     var loadNextUserFollowing = function() {
         currentUser++;
         if (currentUser >= usersFollowingToLoad.length) {
             console.log('  ' + new Date().toUTCString() + ': Finished Loading Followers for ' + usersFollowingToLoad.length + ' Users');
-            return loadGroups(users, groups, content, discussions, currentBatch);
+            return loadPublications(users, groups, content, discussions, publications, currentBatch);
         }
 
         userAPI.loadFollowing(usersFollowingToLoad[currentUser], users, SERVER_URL, loadNextUserFollowing);
     };
     loadNextUserFollowing();
+};
+
+var loadPublications = function(users, groups, content, discussions, publications, currentBatch) {
+    var currentPublication = -1;
+    var publicationsToLoad = _.values(publications);
+    var loadNextUserPublications = function() {
+        currentPublication++;
+        if (currentPublication < publicationsToLoad.length) {
+            var publication = publicationsToLoad[currentPublication];
+
+            publicationAPI.loadPublication(publication, users, SERVER_URL, function() {
+                if (!publication.originalid || !publication.generatedid) {
+                    console.log('    Warning: Publication "%s" was not assigned a generated id.', publication.id);
+                } else {
+                    idMappings['publications'][currentBatch][publication.originalid] = {
+                        id: publication.originalid,
+                        generatedId: publication.generatedid
+                    };
+                }
+                if (currentPublication % 10 === 0) {
+                    console.log('  ' + new Date().toUTCString() + ': Finished Loading Publication ' + currentPublication + ' of ' + publicationsToLoad.length);
+                }
+                if (currentPublication >= publicationsToLoad.length) {
+                    return loadGroups(users, groups, content, discussions, currentBatch);
+                }
+
+                loadNextUserPublications();
+            });
+        } else {
+            general.writeObjectToFile('./scripts/generatedIds/publications-' + currentBatch + '.txt', idMappings['publications'][currentBatch]);
+            console.log('  ' + new Date().toUTCString() + ': Finished Loading ' + publicationsToLoad.length + ' Publications');
+            return loadGroups(users, groups, content, discussions, currentBatch);
+        }
+    };
+    loadNextUserPublications();
 };
 
 ////////////

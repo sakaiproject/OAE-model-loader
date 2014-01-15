@@ -39,9 +39,14 @@ var argv = require('optimist')
     .alias('d', 'discussions')
     .describe('d', 'Number of discussion items per batch')
     .default('d', 5000)
+
+    .alias('p', 'publications')
+    .describe('p', 'Number of publications per batch')
+    .default('p', 5000)
     .argv;
 
 
+var _ = require('underscore');
 var fs = require('fs');
 
 var general = require('./api/general');
@@ -49,6 +54,7 @@ var user = require('./api/user.generate');
 var group = require('./api/group.generate');
 var content = require('./api/content.generate');
 var discussion = require('./api/discussion.generate');
+var publication = require('./api/publication.generate');
 
 //////////////////////////////////////
 // OVERALL CONFIGURATION PARAMETERS //
@@ -62,6 +68,7 @@ var USERS_PER_BATCH = argv.users;
 var GROUPS_PER_BATCH = argv.groups;
 var CONTENT_PER_BATCH = argv.content;
 var DISCUSSIONS_PER_BATCH = argv.discussions;
+var PUBLICATIONS_PER_BATCH = argv.publications;
 
 ////////////////////
 // KICK OFF BATCH //
@@ -79,6 +86,8 @@ var run = function() {
         general.writeObjectToFile('./' + SCRIPT_FOLDER + '/content/' + i + '.txt', batch.content);
         // Write discussions to file
         general.writeObjectToFile('./' + SCRIPT_FOLDER + '/discussions/' + i + '.txt', batch.discussions);
+        // Write publications to file
+        general.writeObjectToFile('./' + SCRIPT_FOLDER + '/publications/' + i + '.txt', batch.publications);
     }
 };
 
@@ -89,7 +98,8 @@ var generateBatch = function(id) {
         users: {},
         groups: {},
         content: {},
-        discussions: {}
+        discussions: {},
+        publications: {}
     };
 
     console.log('Generating users');
@@ -122,6 +132,13 @@ var generateBatch = function(id) {
         batch.discussions[newDiscussion.id] = newDiscussion;
     }
 
+    console.log('Generating publications');
+    var allUsers = _.values(batch.users);
+    for (var d = 0; d < PUBLICATIONS_PER_BATCH; d++) {
+        var newPublication = new publication.Publication(id, allUsers);
+        batch.publications[newPublication.id] = newPublication;
+    }
+
     console.timeEnd('Finished Generating Batch ' + id);
     console.log('=================================');
     return batch;
@@ -133,6 +150,7 @@ var checkDirectories = function() {
     general.createFolder('scripts/groups');
     general.createFolder('scripts/content');
     general.createFolder('scripts/discussions');
+    general.createFolder('scripts/publications');
     general.createFolder('results');
 };
 

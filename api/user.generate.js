@@ -173,15 +173,8 @@ exports.User = function(batchid, TENANT_ALIAS) {
         hobbies: general.generateKeywords(general.ASM(DISTRIBUTIONS[that.userType].HOBBIES))
     };
 
-    var publications = [];
-    var numberOfPublications = general.ASM(DISTRIBUTIONS[that.userType].PUBLICATIONS);
-    for (var p = 0; p < numberOfPublications; p++) {
-        publications.push(new exports.Publication(that));
-    }
-    that.publications = {
-        publicationsPrivacy: general.randomize(DISTRIBUTIONS[that.userType].PUBLICATIONS_PRIVACY),
-        publications: publications
-    };
+    that.numberOfPublications = general.ASM(DISTRIBUTIONS[that.userType].PUBLICATIONS);
+    that.publications = [];
 
     that.groupWeighting = general.randomize(DISTRIBUTIONS[that.userType].GROUPS_WEIGHTING);
     that.contentWeighting = general.randomize(DISTRIBUTIONS[that.userType].CONTENT_WEIGHTING);
@@ -222,16 +215,4 @@ exports.setFollowing = function(users) {
             user.following.push(nonPrivateUsers[followedIndex].id);
         }
     });
-};
-
-exports.Publication = function(user) {
-    var that = {};
-
-    that.title = general.generateSentence(1);
-    that.mainAuthor = user.lastName + ' ' + user.firstName.substring(0, 1) + '.';
-    that.publisher = general.generateCity() + ' Press';
-    that.placeofpublication = general.generateCity();
-    that.year = general.ASM([2005, 15, 1990, 2012]);
-
-    return that;
 };
